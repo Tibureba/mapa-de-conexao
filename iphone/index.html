@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e12">
+<title>Mapa de Conexão</title>
+<!-- Rastreamento do ambiente no Safari: motor do 8th Wall (binário distribuído pela Niantic Spatial) -->
+<script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+<script src="https://cdn.jsdelivr.net/npm/@8thwall/xrextras@1/dist/xrextras.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<style>
+  :root { --vidro: rgba(16, 20, 24, .72); --aro: rgba(255,255,255,.12); --suave: rgba(255,255,255,.7); --azul: #2f7df6; --fonte: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e12; color: #fff; font-family: var(--fonte); -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+  #camerafeed { position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  #entrada { position: fixed; inset: 0; z-index: 20; background: #0b0e12; display: grid; align-content: center; gap: 22px; padding: 28px max(20px, env(safe-area-inset-left)); overflow: auto; }
+  #entrada > * { max-width: 520px; width: 100%; margin: 0 auto; }
+  #entrada h1 { margin: 0; font-size: 34px; line-height: 1.05; }
+  #entrada p { margin: 0; color: var(--suave); line-height: 1.5; font-size: 16px; }
+  .bolhas { display: flex; gap: 10px; align-items: end; height: 46px; }
+  .bolhas i { display: block; border-radius: 50%; box-shadow: inset -4px -6px 10px rgba(0,0,0,.25), inset 4px 5px 8px rgba(255,255,255,.45); }
+  #iniciar { background: var(--azul); padding: 16px; border-radius: 16px; font-size: 18px; font-weight: 700; }
+
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; display: none; }
+  #hud.ativo { display: block; }
+  #hud .col { position: absolute; inset: 0; display: flex; flex-direction: column; padding: calc(12px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom)); }
+  .cartao { background: var(--vidro); border: 1px solid var(--aro); border-radius: 22px; padding: 16px; pointer-events: auto; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  #topo { display: flex; align-items: center; gap: 12px; }
+  #topo .esq { flex: 1; min-width: 0; }
+  #titulo { font-weight: 650; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #detalhe { font-size: 13px; color: var(--suave); }
+  #topo .dir { text-align: right; }
+  #valor { font-size: 34px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  #valor small { font-size: 14px; font-weight: 500; color: var(--suave); }
+  #qualidade { font-size: 13px; font-weight: 650; margin-top: 4px; }
+  #seletor { margin-top: 10px; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--vidro); pointer-events: auto; }
+  #seletor button { flex: 1; height: 38px; border-radius: 999px; background: transparent; font-weight: 650; font-size: 14px; }
+  #seletor button[aria-pressed="true"] { background: #fff; color: #000; }
+  #msg { margin-top: 10px; background: var(--vidro); border-radius: 14px; padding: 12px; font-size: 14px; line-height: 1.4; }
+  #msg:empty { display: none; }
+  .vazio { flex: 1; }
+  #legenda { height: 10px; border-radius: 999px; }
+  .linha { display: flex; justify-content: space-between; font-size: 12px; color: var(--suave); margin-top: 4px; }
+  #contagem { font-size: 13.5px; font-weight: 550; margin: 12px 0; }
+  .botoes { display: flex; gap: 10px; }
+  .botoes button { flex: 1; height: 48px; border-radius: 16px; font-weight: 650; font-size: 15px; background: rgba(255,255,255,.14); }
+  .etiqueta { position: absolute; transform: translate(-50%, -140%); white-space: nowrap; font-size: 12.5px; font-weight: 650; padding: 5px 10px; border-radius: 999px; background: rgba(0,0,0,.6); border: 1.5px solid; display: none; }
+  /* atribuição exigida pela licença do motor */
+  #credito { margin-top: 8px; font-size: 10.5px; color: rgba(255,255,255,.55); text-align: center; pointer-events: auto; }
+  #credito a { color: inherit; }
+</style>
+</head>
+<body>
+  <canvas id="camerafeed"></canvas>
+
+  <main id="entrada">
+    <div class="bolhas" aria-hidden="true">
+      <i style="width:30px;height:30px;background:#3be07a"></i>
+      <i style="width:22px;height:22px;background:#ffc83a"></i>
+      <i style="width:16px;height:16px;background:#ff4d4d"></i>
+    </div>
+    <h1>Mapa de Conexão</h1>
+    <p>Ande pelo ambiente com a câmera aberta. Em cada ponto, a página mede a velocidade real da internet e deixa uma bolha colorida no ar: verde onde está rápida, vermelha onde está lenta.</p>
+    <p>Ao tocar em Iniciar, o Safari vai pedir a câmera e os sensores de movimento. Permita os dois.</p>
+    <button id="iniciar">Iniciar</button>
+  </main>
+
+  <div id="hud">
+    <div id="etqMelhor" class="etiqueta"></div>
+    <div id="etqPior" class="etiqueta"></div>
+    <div class="col">
+      <div id="topo" class="cartao">
+        <div class="esq"><div id="titulo">Velocidade</div><div id="detalhe">Medindo…</div></div>
+        <div class="dir"><div id="valor">--</div><div id="qualidade"></div></div>
+      </div>
+      <div id="seletor" role="group" aria-label="O que mapear">
+        <button data-modo="vel" aria-pressed="true">Velocidade</button>
+        <button data-modo="ruido" aria-pressed="false">Ruído</button>
+        <button data-modo="luz" aria-pressed="false">Claridade</button>
+      </div>
+      <div id="msg"></div>
+      <div class="vazio"></div>
+      <div class="cartao">
+        <div id="legenda"></div>
+        <div class="linha"><span id="legEsq"></span><span id="legDir"></span></div>
+        <div id="contagem">Nenhuma medição ainda</div>
+        <div class="botoes"><button id="limpar">Limpar</button></div>
+      </div>
+      <div id="credito">Rastreamento: 8th Wall Engine © 2026 Niantic Spatial, Inc. Uso sob a
+        <a href="https://github.com/8thwall/engine/blob/main/LICENSE" target="_blank" rel="noopener">XR Engine License Agreement</a>, sem garantias.</div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

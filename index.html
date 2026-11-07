@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0e12">
 <title>Mapa de Conexão</title>
+<script>
+  // iPhone e iPad (o Safari não tem WebXR): versão própria, com o motor do 8th Wall
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    location.replace('iphone/');
+  }
+</script>
 <style>
   :root {
     --vidro: rgba(16, 20, 24, .72);
