@@ -277,8 +277,25 @@ function rodar() {
   setInterval(() => { if (estado.modo === 'vel' || estado.valor.vel == null) medirVelocidade(); }, 700);
 }
 
+// O motor precisa de WebAssembly com SIMD, que o Safari só tem do iOS 16.4 em diante.
+// Sem isso ele quebra com "invalid opcode 253"; melhor avisar antes, em português.
+const temSimd = (() => {
+  try {
+    return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
+  } catch { return false; }
+})();
+if (!temSimd) {
+  const ios = (navigator.userAgent.match(/OS (\d+[_\d]*)/) || ['', ''])[1].replace(/_/g, '.');
+  $('#iniciar').disabled = true;
+  $('#iniciar').textContent = 'Este aparelho não é compatível';
+  $('#erro').textContent = `A realidade aumentada no Safari precisa do iOS 16.4 ou mais novo${ios ? ` (este está no iOS ${ios})` : ''}. ` +
+    'Se o iPhone aceitar, atualize em Ajustes → Geral → Atualização de Software.';
+  $('#erro').style.display = 'block';
+}
+
 // o Safari só libera câmera e sensores depois de um toque: por isso a tela de entrada
 $('#iniciar').addEventListener('click', () => {
+  if (!temSimd) return;
   if (window.XR8) { $('#entrada').style.display = 'none'; rodar(); return; }
   // o motor (1 MB) ainda está baixando: avisa e começa sozinho quando chegar
   $('#iniciar').textContent = 'Carregando o motor de realidade aumentada…';
