@@ -9,8 +9,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
 <script src="https://cdn.jsdelivr.net/npm/@8thwall/xrextras@1/dist/xrextras.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
-<script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+<script>
+  // Qualquer erro aparece na tela (em vez de o botão ficar morto): o print diz o que houve.
+  (function () {
+    function mostrar(t) {
+      var el = document.getElementById('erro');
+      if (!el) { setTimeout(function () { mostrar(t); }, 200); return; }
+      el.textContent = 'Erro: ' + t + ' · iOS: ' + (navigator.userAgent.match(/OS (\d+[_\d]*)/) || ['', '?'])[1].replace(/_/g, '.');
+      el.style.display = 'block';
+    }
+    window.addEventListener('error', function (e) { mostrar((e.message || 'desconhecido') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')); });
+    window.addEventListener('unhandledrejection', function (e) { mostrar(String(e.reason && (e.reason.message || e.reason))); });
+    // se em 12 s o código principal não tiver carregado, avisa também
+    setTimeout(function () { if (!window.__mapaPronto) mostrar('o código da página não carregou'); }, 12000);
+  })();
 </script>
 <style>
   :root { --vidro: rgba(16, 20, 24, .72); --aro: rgba(255,255,255,.12); --suave: rgba(255,255,255,.7); --azul: #2f7df6; --fonte: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
@@ -69,6 +81,7 @@
     <p>Ande pelo ambiente com a câmera aberta. Em cada ponto, a página mede a velocidade real da internet e deixa uma bolha colorida no ar: verde onde está rápida, vermelha onde está lenta.</p>
     <p>Ao tocar em Iniciar, o Safari vai pedir a câmera e os sensores de movimento. Permita os dois.</p>
     <button id="iniciar">Iniciar</button>
+    <div id="erro" style="display:none;font-size:14px;line-height:1.4;color:#ffb3b3;background:rgba(255,0,0,.12);border-radius:12px;padding:12px"></div>
   </main>
 
   <div id="hud">
@@ -97,6 +110,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=2"></script>
 </body>
 </html>

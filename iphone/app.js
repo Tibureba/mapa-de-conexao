@@ -1,7 +1,8 @@
 // Versão iPhone: o Safari não tem WebXR de realidade aumentada, então o rastreamento do ambiente
 // vem do motor do 8th Wall (visão computacional na própria página). As medições são as mesmas
 // da versão Android: velocidade real da conexão, ruído e claridade.
-import * as THREE from 'three';
+// endereço completo, sem "importmap": o Safari só entende importmap do iOS 16.4 em diante
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 window.THREE = THREE; // o módulo three.js do 8th Wall procura o THREE global
 
@@ -278,6 +279,10 @@ function rodar() {
 
 // o Safari só libera câmera e sensores depois de um toque: por isso a tela de entrada
 $('#iniciar').addEventListener('click', () => {
-  $('#entrada').style.display = 'none';
-  window.XR8 ? rodar() : window.addEventListener('xrloaded', rodar, { once: true });
+  if (window.XR8) { $('#entrada').style.display = 'none'; rodar(); return; }
+  // o motor (1 MB) ainda está baixando: avisa e começa sozinho quando chegar
+  $('#iniciar').textContent = 'Carregando o motor de realidade aumentada…';
+  $('#iniciar').disabled = true;
+  window.addEventListener('xrloaded', () => { $('#entrada').style.display = 'none'; rodar(); }, { once: true });
 });
+window.__mapaPronto = true;
